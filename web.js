@@ -2,6 +2,9 @@ var async   = require('async');
 var express = require('express');
 var util    = require('util');
 
+console.log(process.env.FACEBOOK_APP_ID);
+console.log(process.env.FACEBOOK_SECRET);
+
 // create an express webserver
 var app = express.createServer(
   express.logger(),
@@ -11,8 +14,8 @@ var app = express.createServer(
   // set this to a secret value to encrypt session cookies
   express.session({ secret: process.env.SESSION_SECRET || 'secret123' }),
   require('faceplate').middleware({
-    app_id: process.env.FACEBOOK_APP_ID,
-    secret: process.env.FACEBOOK_SECRET,
+    app_id: process.env.FACEBOOK_APP_ID || "174829115993664",
+    secret: process.env.FACEBOOK_SECRET || "df774357c707eff88f38d0050e5ca29f",
     scope:  'user_likes,user_photos,user_photo_video_tags'
   })
 );
@@ -46,7 +49,7 @@ app.dynamicHelpers({
 function render_page(req, res) {
   req.facebook.app(function(app) {
     req.facebook.me(function(user) {
-      res.render('index.ejs', {
+      res.render('indexs.ejs', {
         layout:    false,
         req:       req,
         app:       app,

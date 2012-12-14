@@ -1,14 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:fb="http://ogp.me/ns/fb#" lang="en">
     <head>
-        <title>Town Country River</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stop! The guessing game</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
+
         <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
         <link href="bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
         <link href="css/custom.css" rel="stylesheet" media="screen">
+
+        <!--[if IEMobile]>
+        <link rel="stylesheet" href="mobile.css" media="screen" type="text/css"  />
+        <![endif]-->
+        <meta property="og:title" content="<%= app.name %>" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="<%= url() %>" />
+        <meta property="og:image" content="<%= url('/logo.png') %>" />
+        <meta property="og:site_name" content="<%= app.name %>" />
+        <meta property="og:description" content="Stop" />
+        <meta property="fb:app_id" content="<%= app.id %>" />
+
         <script src="http://code.jquery.com/jquery-latest.js"></script>
+        <script src="js/facebook.js"></script>
+        <!--[if IE]>
+            <script type="text/javascript">
+                var tags = ['header', 'section'];
+                while(tags.length)
+                    document.createElement(tags.pop());
+            </script>
+        <![endif]-->
+
         <script src="js/jquery.transit.js" type="text/javascript"></script>
-        <script src="http://tcrmarkup.herokuapp.com/socket.io/socket.io.js"></script>
+        <script src="http://stop-theguessinggame.herokuapp.com/socket.io/socket.io.js"></script>
         <script src="bootstrap/js/bootstrap.min.js"></script>
         <script src="js/jquery.paginate.js"></script>
         <script src="js/jquery.dom-outline.js"></script>
@@ -16,6 +39,40 @@
 
     </head>
     <body>
+        <div id="fb-root"></div>
+        <script type="text/javascript">
+            window.fbAsyncInit = function() {
+                FB.init({
+                    appId      : '<%= app.id %>', // App ID
+                    channelUrl : '<%= url_no_scheme('/channel.html') %>', // Channel File
+                    status     : true, // check login status
+                    cookie     : true, // enable cookies to allow the server to access the session
+                    xfbml      : true // parse XFBML
+                });
+
+                // Listen to the auth.login which will be called when the user logs in
+                // using the Login button
+                FB.Event.subscribe('auth.login', function(response) {
+                    // We want to reload the page now so PHP can read the cookie that the
+                    // Javascript SDK sat. But we don't want to use
+                    // window.location.reload() because if this is in a canvas there was a
+                    // post made to this page and a reload will trigger a message to the
+                    // user asking if they want to send data again.
+                    window.location = window.location;
+                });
+
+                FB.Canvas.setAutoGrow();
+            };
+
+            // Load the SDK Asynchronously
+            (function(d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) return;
+                js = d.createElement(s); js.id = id;
+                js.src = "//connect.facebook.net/en_US/all.js";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'facebook-jssdk'));
+        </script>
         <div class="overlay"> </div>
         <a href="#" class="close-button"><img src="/img/close.png"></a>
         <div class="error post-it"> </div>
@@ -29,9 +86,14 @@
                     <div class="paper paper1 about root">
                         <h1 class="paper_title"> How to Play </h1>
                         <br>
-                        <p> Town, Country, River is a game where the players have to write words beginning with a random letter that is randomly selected in the start of each round.</p>
-                        <p> The words should be in the right category and are validated by the others players. </p>
-                        <p> Unique word: 10 points <br>Repeated word: 5 points  </p>
+                        <p> Stop! is a word guessing game where the players have to write words beginning with a random letter in some predetermined categories. <br> </p>
+                        <p> At first, categories like "Name", "Color", "Animal", "Town", "Country", "River" and others are selected. <br>
+                            Then, for each round, a letter will be randomly selected and the players should guess words that begins with the letter. <br>
+                            In the end of the round, the players have to validate the written words. </p>
+                        <p> Each valid word can give 5 or 10 points to the players that wrote it. <br>
+                            If just one player wrote, he receives 10 points. <br>
+                            If more than one player wrote the same word, they receive 5 points. <br> </p>
+                        <p> This game is also called "Town Country River", "Stadt, Land, Fluss" or "Adedanha". </p>
                     </div>
                     <div class="paper paper2 active login root">
                         <h1 class="paper_title"> Let's Play! </h1>
@@ -42,6 +104,46 @@
                             </div>
                             <button type="button" class="hint paper_btn" id="submit_login_btn"> Start! </button>
                         </form>
+                        <div class="clearfix">
+                            <% if (user) { %>
+                            <p id="picture" style="background-image: url(https://graph.facebook.com/<%= user.id %>/picture?type=normal)"></p>
+
+                            <div>
+                                <h1>Welcome, <strong><%= user.name %></strong></h1>
+                                <p class="tagline">
+                                    This is your app
+                                    <a href="<%= app.link %>" target="_top"><%= app.name %></a>
+                                </p>
+
+                                <div id="share-app">
+                                    <p>Share your app:</p>
+                                    <ul>
+                                        <li>
+                                            <a href="#" class="facebook-button" id="postToWall" data-url="<%= url() %>">
+                                                <span class="plus">Post to Wall</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" class="facebook-button speech-bubble" id="sendToFriends" data-url="<%= url() %>">
+                                                <span class="speech-bubble">Send Message</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" class="facebook-button apprequests" id="sendRequest" data-message="Test this awesome app">
+                                                <span class="apprequests">Send Requests</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <% } else { %>
+                            <div>
+                                <h1>Welcome</h1>
+                                <div class="fb-login-button" data-scope="user_likes,user_photos"></div>
+                            </div>
+                            <% } %>
+                        </div>
+
                     </div>
                 </div>
                 <div class="home">
@@ -54,6 +156,10 @@
                         <h1 class="paper_title"> Rooms </h1>
                         <a href="#" class="new_room hint" id="new_room"> New Room </a>
                         <input type="text" class="search_room hint" id="search_room" placeholder="Search room"> 
+                        <div class="no_rooms">
+                            <span class="no_rooms_line1">No rooms were found.</span>
+                            <span class="no_rooms_line2">Create a <a href="#" class="new_room hint" id="new_room"> New Room </a></span>
+                        </div>
                         <div class="page_container"> 
                             <ul class="rooms_header">
                                 <li class="room_row header">
@@ -73,14 +179,29 @@
                         <form class="create_room_form">
                             <label class="create_form_label" for="room_name"> Room Name: </label>
                             <input class="create_form_input hint" id="room_name" type="text" name="name">     
+                            <div class="clear"></div>
+                            
                             <label class="create_form_label" for="room_rounds"> Rounds: </label>
                             <input class="create_form_input hint" id="room_rounds" type="text" name="rounds" value="10">     
+                            <div class="clear"></div>
+
                             <label class="create_form_label" for="room_players"> Players: </label>
                             <input class="create_form_input hint" id="room_players" type="text" name="players" value="0">    
+                            <div class="clear"></div>
+
                             <label class="create_form_label" for="room_stop"> Stop Time: </label>
                             <input class="create_form_input hint" id="room_stop" type="text" name="stop" value="60">    
+                            <div class="clear"></div>
+                            
                             <label class="create_form_label" for="room_check"> Check Time: </label>
                             <input class="create_form_input hint" id="room_check" type="text" name="check" value="20">
+                            <div class="clear"></div>
+        
+                            <label class="create_form_label" for="room_interval"> Interval Time: </label>
+                            <input class="create_form_input hint" id="room_interval" type="text" name="interval" value="20">
+                            <div class="clear"></div>
+
+                            <span class="create_form_label_letters"> Possible Letters: <span class="how_many_selected">(21 selected)</span> </span>
                             <div class="letter_list hint" id="letter_list"> 
                                 <input type="checkbox" name="A" id="id_A" class="letters" checked="checked"/><label class="letters_label" for="id_A">A</label>
                                 <input type="checkbox" name="B" id="id_B" class="letters" checked="checked"/><label class="letters_label" for="id_B">B</label>
@@ -91,26 +212,29 @@
                                 <input type="checkbox" name="G" id="id_G" class="letters" checked="checked"/><label class="letters_label" for="id_G">G</label>
                                 <input type="checkbox" name="H" id="id_H" class="letters" checked="checked"/><label class="letters_label" for="id_H">H</label>
                                 <input type="checkbox" name="I" id="id_I" class="letters" checked="checked"/><label class="letters_label" for="id_I">I</label>
-                                <input type="checkbox" name="J" id="id_J" class="letters" checked="checked"/><label class="letters_label" for="id_J">J</label>
-                                <input type="checkbox" name="K" id="id_K" class="letters" checked="checked"/><label class="letters_label" for="id_K">K</label>
+                                <input type="checkbox" name="J" id="id_J" class="letters"/><label class="letters_label" for="id_J">J</label>
+                                <input type="checkbox" name="K" id="id_K" class="letters"/><label class="letters_label" for="id_K">K</label>
                                 <input type="checkbox" name="L" id="id_L" class="letters" checked="checked"/><label class="letters_label" for="id_L">L</label>
                                 <input type="checkbox" name="M" id="id_M" class="letters" checked="checked"/><label class="letters_label" for="id_M">M</label>
                                 <input type="checkbox" name="N" id="id_N" class="letters" checked="checked"/><label class="letters_label" for="id_N">N</label>
                                 <input type="checkbox" name="O" id="id_O" class="letters" checked="checked"/><label class="letters_label" for="id_O">O</label>
                                 <input type="checkbox" name="P" id="id_P" class="letters" checked="checked"/><label class="letters_label" for="id_P">P</label>
-                                <input type="checkbox" name="Q" id="id_Q" class="letters" checked="checked"/><label class="letters_label" for="id_Q">Q</label>
+                                <input type="checkbox" name="Q" id="id_Q" class="letters"/><label class="letters_label" for="id_Q">Q</label>
                                 <input type="checkbox" name="R" id="id_R" class="letters" checked="checked"/><label class="letters_label" for="id_R">R</label>
                                 <input type="checkbox" name="S" id="id_S" class="letters" checked="checked"/><label class="letters_label" for="id_S">S</label>
                                 <input type="checkbox" name="T" id="id_T" class="letters" checked="checked"/><label class="letters_label" for="id_T">T</label>
                                 <input type="checkbox" name="U" id="id_U" class="letters" checked="checked"/><label class="letters_label" for="id_U">U</label>
                                 <input type="checkbox" name="V" id="id_V" class="letters" checked="checked"/><label class="letters_label" for="id_V">V</label>
                                 <input type="checkbox" name="W" id="id_W" class="letters" checked="checked"/><label class="letters_label" for="id_W">W</label>
-                                <input type="checkbox" name="X" id="id_X" class="letters" checked="checked"/><label class="letters_label" for="id_X">X</label>
+                                <input type="checkbox" name="X" id="id_X" class="letters"/><label class="letters_label" for="id_X">X</label>
                                 <input type="checkbox" name="Y" id="id_Y" class="letters" checked="checked"/><label class="letters_label" for="id_Y">Y</label>
-                                <input type="checkbox" name="Z" id="id_Z" class="letters" checked="checked"/><label class="letters_label" for="id_Z">Z</label>
+                                <input type="checkbox" name="Z" id="id_Z" class="letters"/><label class="letters_label" for="id_Z">Z</label>
                                 <div class="clear"></div>
                             </div>
-                            <textarea name="categories" class="create_room_categories_text hint" id="create_room_categories_text">Town Country River</textarea>
+                            <label class="create_form_label_category" for="room_rounds"> Categories: (Separated by space) </label>
+                            <textarea name="categories" class="create_room_categories_text hint" id="create_room_categories_text">Town
+Country
+River</textarea>
                             <button class="create_room_submit hint paper_btn" id="create_room_submit"> Create Room </button>
                             <button class="create_room_cancel hint paper_btn" id="create_room_cancel"> Cancel </button>
                             <div class="clear"> </div>

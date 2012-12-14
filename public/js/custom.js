@@ -1,4 +1,4 @@
-var address = 'http://tcrmarkup.herokuapp.com:80/';//window.location;//'http://127.0.0.1:8080';
+var address = 'http://stop-theguessinggame.herokuapp.com:80';//'http://127.0.0.1:8080';
 var socket;
 var big_screen = null;
 var root = 0;
@@ -55,6 +55,7 @@ var hint_messages = {
 	,'room_players': '<p>Write the maximum number of players here. </p> <p>If it is 0, there will be no maximum number of players.</p>'
 	,'room_stop': '<p>Write the stop time in seconds here. </p> <p>If it is 0, the players can ask stop as soon as they fill all the fields.</p>'
 	,'room_check': '<p>Write the checking time in seconds here. </p> <p> If the timer reaches 0, the checking process will end.</p>'
+	,'room_interval': '<p>Write the interval time in seconds here. </p> <p> If the timer reaches 0, the interval will end and a new round will start.</p>'
 	,'letter_list': '<p>Select the letters that can be randomly selected for the game.</p>'
 	,'create_room_categories_text': '<p>Write the categories for the room separated by spaces.</p>'
 	,'create_room_submit': '<p>Use this button to create the room.</p>'
@@ -225,6 +226,7 @@ function submit_start_game(event) {
 }
 
 function submit_ready(event) {
+	$('.ready_play').addClass('marked');
 	socket.emit("ready");
 }
 
@@ -244,23 +246,29 @@ function submit_change_name() {
 function search_room() {
 	var search_field = $('.search_room').val();
 	$('ul.rooms').html("");
-	for (var room_index in rooms) {
-		var room = rooms[room_index];
-		if (room.name.indexOf(search_field) == -1) {
-			continue;
+	if (rooms.length == 0 ) {
+		$(".no_rooms").show();
+		$(".page_container").hide();
+	} else {
+		$(".page_container").show();
+		$(".no_rooms").hide();	
+		for (var room_index in rooms) {
+			var room = rooms[room_index];
+			if (room.name.indexOf(search_field) == -1) {
+				continue;
+			}
+			$('ul.rooms').append(
+				'<li class="room_row">' +
+					'<a href="#" class="room_link" id="room_' + room.id + '">' +
+						'<span class="room_name">' + room.name + '</span>' +
+						'<span class="room_players">' + room.user_count + '/' + room.max_players + '</span>' +
+						'<span class="room_status">' + room.current_round + '/' + room.rounds + '</span>' +
+					'</a>' +
+				'</li>'
+			);
 		}
-		$('ul.rooms').append(
-			'<li class="room_row">' +
-				'<a href="#" class="room_link" id="room_' + room.id + '">' +
-					'<span class="room_name">' + room.name + '</span>' +
-					'<span class="room_players">' + room.user_count + '/' + room.max_players + '</span>' +
-					'<span class="room_status">' + room.current_round + '/' + room.rounds + '</span>' +
-				'</a>' +
-			'</li>'
-		);
+		$('.page_container').pajinate();
 	}
-	$('.page_container').pajinate();
-		
 };
 
 function sub_mode_visible(elements, modes) {
@@ -839,6 +847,10 @@ $(document).ready(function() {
 	});
 
 	socket.on("room_update", function(data) {
+		if (data.update) {
+			$('.ready_play').removeClass('marked');	
+		}
+		
 		$('.current_round').text('Round ' + data.room.current_round + '/' + data.room.rounds);
 		$('.room .paper_title').text(data.room.name);
 		$('.score-list').html('');
@@ -846,90 +858,95 @@ $(document).ready(function() {
 		for (var user_id in data.room.users) {
 			var user = data.room.users[user_id];
 			$('.score-list').append(
-				'<tr '+ (user.leader? 'class="leader"': "") +'>'+
+				'<tr class="user_in_list'+ (user.leader? ' leader': "") + (user.ready? ' ready_user': "") +'">'+
 					'<td class="player_name">' + user.nickname + '</td>' +
 					'<td class="player_score">' + user.score + '</td>' +
 				'</tr>'
 			);
 			if (user_id == current_user && user.leader) {
 				leader = true;
+				if (user.ready){
+
+					$('.ready_play').addClass('marked');
+				}
 			}
-		}
-		if (data.room.game.status == 0) {
-			$('.current_letter').text('?');
-			$('.scores .time_text').text('');
-			if (leader) {
-				$('.scores .ready_play').css('visibility', 'visible');
-				$('.scores .ready_play').text('Play');
-				hint_messages['ready_play_1'] = '<p> Click in this button to start the game </p>';
-			} else {
-				$('.scores .ready_play').css('visibility', 'hidden');
-			}
-		}
-		if (data.room.game.status == 1) {
-			$('.current_letter').text(data.room.game.letter);
-			$('.phrase_letter').text(data.room.game.letter);
-			$('.playing .time_text').html('<span class="time-number"></span>s remaining');
-			$('.playing .ready_play').css('visibility', 'visible');
-			$('.playing .ready_play').text('Stop!');
-			$('.game_form').html("");
-			for (var category_id in data.room.categories) {
-				var category = data.room.categories[category_id];
-				$('.game_form').append(
-					'<div class="field">' +
-						'<label class="game_form_label" for="game_form_' + category + '">' + category + ': </label>' +
-						'<input class="game_form_input hint" id="game_form_' + category + '" type="text" name="' + category + '"></input>' +
-					'</div>'
-				);
-				
-			}
-			$('.game_form').append('<div class="clear"></div>');
-			clearInterval(timer_interval);
-			timer_interval = setInterval(function (){
-				socket.emit("get_timer");
-			}, 500);
-			stop_enabled = false;
-			$('.playing .ready_play').addClass("disabled");		
-		}
-		if (data.room.game.status == 2) {
-			$('.current_letter').text(data.room.game.letter);
-			$('.phrase_letter').text(data.room.game.letter);
-			$('.checking_word').text(data.room.game.category);
-			$('.checking .time_text').html('<span class="time-number"></span>s remaining');
-			$('.checking .ready_play').css('visibility', 'visible');
-			$('.checking .ready_play').text('Ready');
-			$('.check_form').html("");
-			for (var word in data.room.game.words) {
-				$('.check_form').append(
-					'<div class="field hint">' +
-						'<input class="check_form_input" id="check_form_' + word + '" type="checkbox" name="' + word + '"></input>' +
-						'<label class="check_form_label" for="check_form_' + word + '">' + word + '</label>' +
-					'</div>'
-				);
-			}
-			$('.check_form').append('<div class="clear"></div>');
-			clearInterval(timer_interval);
-			timer_interval = setInterval(function (){
-				socket.emit("get_timer");
-			}, 500);
-		}
-		if (data.room.game.status == 3) {
-			$('.current_letter').text('?');
-			$('.scores .time_text').html('<span class="time-number"></span>s remaining');
-			$('.scores .ready_play').text('Ready');
-			hint_messages['ready_play_1'] = '<p>The game will start when all players are ready or when the timer reaches 0.</p>';
-			$('.scores .ready_play').css('visibility', 'visible');
-			clearInterval(timer_interval);
-			timer_interval = setInterval(function (){
-				socket.emit("get_timer");
-			}, 500);
-		}
-		if (data.room.game.status == 4) {
-			$('.current_letter').text('?');
-			$('.scores .time_text').text('Game finished!');
-			$('.scores .ready_play').css('visibility', 'hidden');
 		}
 		if (data.update) {
+
+			if (data.room.game.status == 0) {
+				$('.current_letter').text('?');
+				$('.scores .time_text').text('');
+				if (leader) {
+					$('.scores .ready_play').css('visibility', 'visible');
+					$('.scores .ready_play').text('Play');
+					hint_messages['ready_play_1'] = '<p> Click in this button to start the game </p>';
+				} else {
+					$('.scores .ready_play').css('visibility', 'hidden');
+				}
+			}
+			if (data.room.game.status == 1) {
+				$('.current_letter').text(data.room.game.letter);
+				$('.phrase_letter').text(data.room.game.letter);
+				$('.playing .time_text').html('<span class="time-number"></span>s remaining');
+				$('.playing .ready_play').css('visibility', 'visible');
+				$('.playing .ready_play').text('Stop!');
+				$('.game_form').html("");
+				for (var category_id in data.room.categories) {
+					var category = data.room.categories[category_id];
+					$('.game_form').append(
+						'<div class="field">' +
+							'<label class="game_form_label" for="game_form_' + category + '">' + category + ': </label>' +
+							'<input class="game_form_input hint" id="game_form_' + category + '" type="text" name="' + category + '"></input>' +
+						'</div>'
+					);
+					
+				}
+				$('.game_form').append('<div class="clear"></div>');
+				clearInterval(timer_interval);
+				timer_interval = setInterval(function (){
+					socket.emit("get_timer");
+				}, 500);
+				stop_enabled = false;
+				$('.playing .ready_play').addClass("disabled");		
+			}
+			if (data.room.game.status == 2) {
+				$('.current_letter').text(data.room.game.letter);
+				$('.phrase_letter').text(data.room.game.letter);
+				$('.checking_word').text(data.room.game.category);
+				$('.checking .time_text').html('<span class="time-number"></span>s remaining');
+				$('.checking .ready_play').css('visibility', 'visible');
+				$('.checking .ready_play').text('Ready');
+				$('.check_form').html("");
+				for (var word in data.room.game.words) {
+					$('.check_form').append(
+						'<div class="field hint">' +
+							'<input class="check_form_input" id="check_form_' + word + '" type="checkbox" name="' + word + '"></input>' +
+							'<label class="check_form_label" for="check_form_' + word + '">' + word + '</label>' +
+						'</div>'
+					);
+				}
+				$('.check_form').append('<div class="clear"></div>');
+				clearInterval(timer_interval);
+				timer_interval = setInterval(function (){
+					socket.emit("get_timer");
+				}, 500);
+			}
+			if (data.room.game.status == 3) {
+				$('.current_letter').text('?');
+				$('.scores .time_text').html('<span class="time-number"></span>s remaining');
+				$('.scores .ready_play').text('Ready');
+				hint_messages['ready_play_1'] = '<p>The game will start when all players are ready or when the timer reaches 0.</p>';
+				$('.scores .ready_play').css('visibility', 'visible');
+				clearInterval(timer_interval);
+				timer_interval = setInterval(function (){
+					socket.emit("get_timer");
+				}, 500);
+			}
+			if (data.room.game.status == 4) {
+				$('.current_letter').text('?');
+				$('.scores .time_text').text('Game finished!');
+				$('.scores .ready_play').css('visibility', 'hidden');
+			}
 			to_room(data.room);	
 		}
 	});
@@ -1041,18 +1058,32 @@ $(document).ready(function() {
 	//Create room
 	$(".letters_label").click(function(){
 		if (!hinting) {
+			$('.how_many_selected').text('');
+			var precount = $('.letters').filter(':checked').length;
 			var obj = $(this), 
 				element = "#"+obj.attr("for");
 			if (!$(element).prop('checked')) {
 				obj.css('color', '#FFF');
 				obj.css('background-color', '#333');
+				if (precount == 25) {
+					$('.how_many_selected').text('(All selected)');
+				} else {
+					$('.how_many_selected').text('('+(precount+1)+' selected)');
+				}
 			} else {
 				obj.css('color', '#000');
 				obj.css('background-color', '#EEE');
+				
+				if (precount == 1) {
+					$('.how_many_selected').text('(None selected)');
+				} else {
+					$('.how_many_selected').text('('+(precount-1)+' selected)');
+				}
 			};
 			$(element).change();
-	
+		
 		}
+
 		
 	});
 
@@ -1069,7 +1100,7 @@ $(document).ready(function() {
 		}
 	});
 
-	$('.create_room_form').keypress(key_submit(create_new_room));
+	$('.create_room_form input').keypress(key_submit(create_new_room));
 	$(".create_room_submit").click(function(){
 		if (!hinting) {
 			return create_new_room();	

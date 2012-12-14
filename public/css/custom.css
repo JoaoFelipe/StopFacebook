@@ -282,19 +282,23 @@ form .paper_btn {
 	display: none;
 }
 
-.letters_label {
-	display: inline;
-}
 
 .letters_label:hover {
 	cursor: pointer;
 }
 
 .letters_label {
+	display: inline;
+	line-height: 17px;
+	margin-bottom: 1px;
 	width: 1em;
 	display: inline-block;
 	background-color: #EEE;
 	text-align: center;
+}
+
+.letter_list {
+	margin-bottom: 4px;
 }
 
 
@@ -311,6 +315,8 @@ form .paper_btn {
 .create_form_label {
 	display: inline-block;
 	width: 90px;
+	float: left;
+	margin-top: 5px;
 }
 
 .create_room_form {
@@ -603,4 +609,35 @@ input[type="text"].change_name {
 	top: 30%;
 	display: none;
 	z-index: 52;
+}
+
+.no_rooms {
+	display: none;
+}
+
+.no_rooms span {
+	display: block;
+}
+
+.create_form_label_letters {
+	margin-top: -3px;
+	margin-bottom: -2px;
+	display: block;
+}
+
+.create_form_label_category {
+	margin-top: -3px;
+}
+
+.create_form_input {
+	display: block;
+	float: left;
+}
+
+.marked {
+	border: 3px solid green;
+}
+
+.ready_user {
+	color: green;
 }
