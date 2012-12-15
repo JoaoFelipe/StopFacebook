@@ -23,6 +23,7 @@ var stop_enabled = false;
 var hinting = false;
 var old_name = "";
 var old_focus = null;
+var next_room = null;
 
 
 var current_mode = '.root';
@@ -77,6 +78,7 @@ var hint_messages = {
 	,'current_letter': '<p> This is the current letter of the round </p>'
 
 };
+
 
 
 function debug() {
@@ -345,7 +347,14 @@ function base() {
 	    }
     });
      
-    
+	if ($('.paper1').is(':visible')) {
+		if ($('.paper1').height() > $('.paper2').height()) {
+			$('.paper2').height($('.paper1').height());
+		} else {
+			$('.paper1').height($('.paper2').height());
+		}
+		
+	} 
 
 
     $(".chat_inside").each(function(){
@@ -833,6 +842,10 @@ $(document).ready(function() {
 			$('#room_name').val(data.user.nickname + "'s room");	
 		}
 		current_user = data.user.id;
+		if (next_room != null) {
+			socket.emit("join_room", {id: next_room});
+			next_room = null;
+		}
 		if (data.update) {
 			to_home();
 		}
@@ -872,7 +885,7 @@ $(document).ready(function() {
 			}
 		}
 		if (data.update) {
-
+			$('.invite').attr('data-room','{ "room":' + data.room.id +'}');
 			if (data.room.game.status == 0) {
 				$('.current_letter').text('?');
 				$('.scores .time_text').text('');
@@ -1188,6 +1201,8 @@ $(document).ready(function() {
 	base_dict[res]();
 	set_dict[root][res]();
 	$('.page_container').pajinate();
+
+
 	//sub_mode = 0;
 	//set_dict[room][res]();
 

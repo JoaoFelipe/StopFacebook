@@ -8,6 +8,7 @@
         <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
         <link href="bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
         <link href="css/custom.css" rel="stylesheet" media="screen">
+        <link href="css/facebook.css" rel="stylesheet" media="screen">
 
         <!--[if IEMobile]>
         <link rel="stylesheet" href="mobile.css" media="screen" type="text/css"  />
@@ -39,9 +40,60 @@
 
     </head>
     <body>
+        <%
+        var normalize = (function() {
+            var from = "ÃÀÁÄÂÈÉËÊÌÍÏÎÒÓÖÔÙÚÜÛãàáäâèéëêìíïîòóöôùúüûÑñÇç",
+              to   = "AAAAAEEEEIIIIOOOOUUUUaaaaaeeeeiiiioooouuuunncc",
+              mapping = {};
+
+            for(var i = 0, j = from.length; i < j; i++ )
+              mapping[ from.charAt( i ) ] = to.charAt( i );
+
+            return function( str ) {
+              var ret = [];
+              for( var i = 0, j = str.length; i < j; i++ ) {
+                  var c = str.charAt( i );
+                  if( mapping.hasOwnProperty( str.charAt( i ) ) )
+                      ret.push( mapping[ c ] );
+                  else
+                      ret.push( c );
+              }
+              return ret.join( '' );
+            }
+
+        })();
+
+        %>
         <div id="fb-root"></div>
         <script type="text/javascript">
             window.fbAsyncInit = function() {
+
+                
+                FB.Event.subscribe('auth.statusChange', function(response) {
+                    if(response.status == 'connected') {
+                        var $_GET = {},
+                        args = location.search.substr(1).split(/&/);
+                        for (var i=0; i<args.length; ++i) {
+                            var tmp = args[i].split(/=/);
+                            if (tmp[0] != "") {
+                                $_GET[decodeURIComponent(tmp[0])] = decodeURIComponent(tmp.slice(1).join("").replace("+", " "));
+                            }
+                        }
+                        function deleteRequest(requestId) {
+                            FB.api(requestId, 'delete', function(response) {
+                                console.log(response);
+                            });
+                        }
+                        <% if (user) { %>
+                            deleteRequest($_GET['request_ids']);
+                        <% } %>
+                    } else {
+                        <% if (req.has_request) { %>
+                            facebookMessage();
+                        <% } %>
+                    }
+                });
+
                 FB.init({
                     appId      : '<%= app.id %>', // App ID
                     channelUrl : '<%= url_no_scheme('/channel.html') %>', // Channel File
@@ -49,6 +101,7 @@
                     cookie     : true, // enable cookies to allow the server to access the session
                     xfbml      : true // parse XFBML
                 });
+                
 
                 // Listen to the auth.login which will be called when the user logs in
                 // using the Login button
@@ -60,23 +113,45 @@
                     // user asking if they want to send data again.
                     window.location = window.location;
                 });
-
+               
                 FB.Canvas.setAutoGrow();
+
+
+                
+
+
+                
             };
 
             // Load the SDK Asynchronously
+
             (function(d, s, id) {
                 var js, fjs = d.getElementsByTagName(s)[0];
                 if (d.getElementById(id)) return;
                 js = d.createElement(s); js.id = id;
+                //js.src = "//connect.facebook.net/pt_BR/all.js#xfbml=1&appId=444848408907809";
                 js.src = "//connect.facebook.net/en_US/all.js";
                 fjs.parentNode.insertBefore(js, fjs);
             }(document, 'script', 'facebook-jssdk'));
+
+            <% if (req.next_room != null) { %>
+                next_room = <%=  req.next_room %>;
+
+            <% } %>
+            
+
         </script>
         <div class="overlay"> </div>
         <a href="#" class="close-button"><img src="/img/close.png"></a>
         <div class="error post-it"> </div>
         <div class="hint_post post-it"> </div>
+        <div class="face_post post-it">
+            <h1>Facebook</h1>
+            <span class="message">
+                You received a request, please login to be able to accept the request.
+            </span>
+            <div class="fb-login-button" data-scope="user_likes,user_photos"></div>
+        </div>
         <div class="content">
             <div class="logo">
 
@@ -100,49 +175,32 @@
                         <form class="login_form paper_form">
                             <div class="nickname">
                                 <label class="label_nickname" for="input_nickname">Nickname</label>
-                                <input type="text" class="hint" id="input_nickname" name="nickname">
+                                <input type="text" class="hint" id="input_nickname" name="nickname"<% if (user) { %> value="<%= normalize(user.name.split(' ')[0].substring(0, 20)) %>" <% } %>>
                             </div>
                             <button type="button" class="hint paper_btn" id="submit_login_btn"> Start! </button>
                         </form>
+                        <div class="clear"></div>
+                        <br>
                         <div class="clearfix">
                             <% if (user) { %>
-                            <p id="picture" style="background-image: url(https://graph.facebook.com/<%= user.id %>/picture?type=normal)"></p>
 
                             <div>
-                                <h1>Welcome, <strong><%= user.name %></strong></h1>
-                                <p class="tagline">
-                                    This is your app
-                                    <a href="<%= app.link %>" target="_top"><%= app.name %></a>
-                                </p>
-
-                                <div id="share-app">
-                                    <p>Share your app:</p>
-                                    <ul>
-                                        <li>
-                                            <a href="#" class="facebook-button" id="postToWall" data-url="<%= url() %>">
-                                                <span class="plus">Post to Wall</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" class="facebook-button speech-bubble" id="sendToFriends" data-url="<%= url() %>">
-                                                <span class="speech-bubble">Send Message</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" class="facebook-button apprequests" id="sendRequest" data-message="Test this awesome app">
-                                                <span class="apprequests">Send Requests</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                <span class="facebook_login">Welcome, <strong><%= user.name %></strong></span>
+                                <br>
+                                <a href="#" class="facebook-button apprequests sendRequest" data-message="Play this awesome game">
+                                    <span class="apprequests">Invite friends!</span>
+                                </a>
                             </div>
                             <% } else { %>
                             <div>
-                                <h1>Welcome</h1>
+                                <span class="facebook_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                <br>
                                 <div class="fb-login-button" data-scope="user_likes,user_photos"></div>
                             </div>
                             <% } %>
                         </div>
+                        <br>
+                        <div class="fb-like-box" data-href="http://www.facebook.com/StopCommunity" data-width="220" data-height="292" data-show-faces="true" data-stream="false" data-header="true"></div>
 
                     </div>
                 </div>
@@ -172,6 +230,24 @@
                             </ul>
                             <div class="page_navigation hint" id="page_navigation"></div>
                             <div class="clear"></div>
+                        </div>
+                        <br>
+                        <br>
+                        <div class="clearfix">
+                            <% if (user) { %>
+
+                            <div>
+                                <a href="#" class="facebook-button apprequests sendRequest" data-message="Play this awesome game">
+                                    <span class="apprequests">Invite friends!</span>
+                                </a>
+                            </div>
+                            <% } else { %>
+                            <div>
+                                <span class="facebook_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                <br>
+                                <div class="fb-login-button" data-scope="user_likes,user_photos"></div>
+                            </div>
+                            <% } %>
                         </div>
                     </div>
                     <div class="paper paper5 create_room home">
@@ -261,6 +337,20 @@ River</textarea>
                             </span>
                             <div class="button_control"><button class="ready_play paper_btn hint" id="ready_play_1">Ready</button></div>
                         </div>
+                        <br>
+                        <% if (user) { %>
+
+                            <div>
+                                <a href="#" class="facebook-button apprequests invite" data-room="wtf" data-message="Play this awesome game">
+                                    <span class="apprequests">Invite friends!</span>
+                                </a>
+                            </div>
+                        <% } else { %>
+                            <div>
+                                <span class="facebook_login in_room_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                <div class="fb-login-button in_room_login_btn" data-scope="user_likes,user_photos"></div>
+                            </div>
+                        <% } %>
                         <div class="tabbable">
                             <ul class="nav nav-tabs">
                                 <li class="active"><a href="#tab1" data-toggle="tab">Chat</a></li>
@@ -273,6 +363,21 @@ River</textarea>
                                 </div>
                                 <div class="tab-pane users_list" id="tab2">
                                     <table class="score-list"></table>
+                                    <div class="face-down">
+                                    <% if (user) { %>
+
+                                        <div>
+                                            <a href="#" class="facebook-button apprequests invite" data-room="wtf" data-message="Play this awesome game">
+                                                <span class="apprequests">Invite friends!</span>
+                                            </a>
+                                        </div>
+                                    <% } else { %>
+                                        <div>
+                                            <span class="facebook_login in_room_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                            <div class="fb-login-button in_room_login_btn" data-scope="user_likes,user_photos"></div>
+                                        </div>
+                                    <% } %>
+                                    </div>
                                 </div>
                             </div>
                         </div>  
@@ -307,6 +412,21 @@ River</textarea>
                                 </div>
                                 <div class="tab-pane users_list" id="tab4">
                                     <table class="score-list"></table>
+                                    <div class="face-down">
+                                    <% if (user) { %>
+
+                                        <div>
+                                            <a href="#" class="facebook-button apprequests invite" data-room="wtf" data-message="Play this awesome game">
+                                                <span class="apprequests">Invite friends!</span>
+                                            </a>
+                                        </div>
+                                    <% } else { %>
+                                        <div>
+                                            <span class="facebook_login in_room_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                            <div class="fb-login-button in_room_login_btn" data-scope="user_likes,user_photos"></div>
+                                        </div>
+                                    <% } %>
+                                    </div>
                                 </div>
                             </div>
                         </div>  
@@ -341,6 +461,21 @@ River</textarea>
                                 </div>
                                 <div class="tab-pane users_list" id="tab6">
                                     <table class="score-list"></table>
+                                    <div class="face-down">
+                                    <% if (user) { %>
+
+                                        <div>
+                                            <a href="#" class="facebook-button apprequests invite" data-room="wtf" data-message="Play this awesome game">
+                                                <span class="apprequests">Invite friends!</span>
+                                            </a>
+                                        </div>
+                                    <% } else { %>
+                                        <div>
+                                            <span class="facebook_login in_room_login">Log In to Facebook! It will allow you to invite friends.</span>
+                                            <div class="fb-login-button in_room_login_btn" data-scope="user_likes,user_photos"></div>
+                                        </div>
+                                    <% } %>
+                                    </div>
                                 </div>
                             </div>
                         </div>

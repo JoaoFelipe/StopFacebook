@@ -4,6 +4,7 @@ function logResponse(response) {
     }
 }
 
+
 $(function(){
     // Set up so we handle click on the buttons
     $('#postToWall').click(function() {
@@ -36,7 +37,7 @@ $(function(){
         );
     });
 
-    $('#sendRequest').click(function() {
+    $('.sendRequest').click(function() {
         FB.ui(
             {
                 method  : 'apprequests',
@@ -50,4 +51,48 @@ $(function(){
             }
         );
     });
+
+    $('.invite').click(function() {
+        FB.ui(
+            {
+                method  : 'apprequests',
+                message : $(this).attr('data-message'),
+                data    : $(this).attr('data-room'),
+            },
+            function (response) {
+                // If response is null the user canceled the dialog
+                if (response != null) {
+                    logResponse(response);
+                }
+            }
+        );
+    });
+
+
+    $('.facelogout').click(function() {
+        FB.logout(function(response) {
+          FB.Auth.setAuthResponse(null, 'unknown');
+        });
+    });
+
+
+
+    
 });
+
+function facebookMessage() {
+    //alert(data.message);
+    $('.overlay').each(function(){
+        var obj = $(this);
+        obj.show();
+        $('.face_post').each(function(){
+            var pst = $(this);
+            pst.show();
+            $('.close-button').show();
+            pst.css('left', ($(document).width() - 200)/2 + 'px');
+            $('.close-button').css('left', pst.position().left + pst.width() + 'px');
+            old_focus = document.activeElement;
+            $('.close-button').focus();
+        });
+    });
+};
