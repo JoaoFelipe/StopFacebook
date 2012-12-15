@@ -1,4 +1,4 @@
-var address = 'http://stop-theguessinggame.herokuapp.com:80';//'http://127.0.0.1:8080';
+var address = 'http://ec2-23-23-18-20.compute-1.amazonaws.com:80/';//'http://127.0.0.1:8080';
 var socket;
 var big_screen = null;
 var root = 0;
@@ -803,6 +803,14 @@ function resize_end() {
 };
 
 $(document).ready(function() {
+	
+	$.ajax({
+		async: false,
+		url: address,
+   		xhrFields: {
+      			withCredentials: true
+   		}
+	});	
 	socket = io.connect(address);
 	$(window).resize(resize);
 	$(".logo").tooltip({placement: 'bottom', title: 'Enable\\Disable Hint mode'});
